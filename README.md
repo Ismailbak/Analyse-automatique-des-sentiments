@@ -13,5 +13,3 @@ Structure (partial):
 
 See `requirements.txt` for core Python dependencies.
 
----
-Created scaffold by GitHub Copilot for project setup.
