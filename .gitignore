@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Virtual environment
+.venv/
+venv/
+
+# Data and models (keep placeholders in repo only)
+data/raw/
+data/processed/
+data/embeddings/
+models/
+
+# OS files
+Thumbs.db
+.DS_Store
