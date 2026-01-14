@@ -1,0 +1,1057 @@
+\documentclass[12pt,a4paper]{article}
+
+% ------------------------------------------------------------
+% Packages
+% ------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{multirow}
+
+% ------------------------------------------------------------
+% Page setup
+% ------------------------------------------------------------
+\geometry{margin=1in}
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+
+% ------------------------------------------------------------
+% Colors
+% ------------------------------------------------------------
+\definecolor{primaryblue}{RGB}{41, 128, 185}
+\definecolor{secondaryblue}{RGB}{52, 152, 219}
+\definecolor{darkgray}{RGB}{44, 62, 80}
+\definecolor{lightgray}{RGB}{236, 240, 241}
+
+% ------------------------------------------------------------
+% Hyperref setup
+% ------------------------------------------------------------
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    filecolor=primaryblue,
+    urlcolor=primaryblue,
+    citecolor=primaryblue,
+}
+
+% ------------------------------------------------------------
+% Section formatting
+% ------------------------------------------------------------
+\titleformat{\section}
+{\color{primaryblue}\normalfont\Large\bfseries}
+{\color{primaryblue}\thesection}{1em}{}
+
+\titleformat{\subsection}
+{\color{secondaryblue}\normalfont\large\bfseries}
+{\color{secondaryblue}\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}
+{\color{darkgray}\normalfont\normalsize\bfseries}
+{\color{darkgray}\thesubsubsection}{1em}{}
+
+% ------------------------------------------------------------
+% Header and footer
+% ------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{primaryblue}{EMSI | Sentiment Analysis}}
+\fancyhead[R]{\textcolor{primaryblue}{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% ------------------------------------------------------------
+% Title page command (removed since we're using manual title page)
+% ------------------------------------------------------------
+% \newcommand{\maketitlepage}{...} % Commented out since we use manual title page
+
+% ------------------------------------------------------------
+% Begin Document
+% ------------------------------------------------------------
+\begin{document}
+
+% Manual title page (the one you've created)
+\begin{titlepage}
+    \begin{tikzpicture}[remember picture,overlay]
+        \fill[primaryblue] (current page.south west) rectangle ([yshift=8cm]current page.north west);
+        \fill[secondaryblue] ([yshift=8cm]current page.north west) rectangle (current page.north east);
+    \end{tikzpicture}
+    
+    \begin{center}
+        \vspace*{1cm}
+        \includegraphics[width=10cm]{emsi_logo.png}\\[1cm]
+    \end{center}
+    
+    \begin{tikzpicture}[remember picture,overlay]
+        \node[anchor=center,text width=\textwidth] at (current page.center) {
+            \begin{center}
+            
+                
+                {\LARGE\bfseries\color{darkgray} Sentiment Detection in Tweets}\\[1.5cm]
+                
+                {\large\color{darkgray}
+                \begin{tabular}{@{}r@{\hspace{0.5em}}l@{}}
+                    \textbf{Elaborated by:} & Ismail Bakraoui \\
+                    & Mohammed Yassine Aoulad Ahriz \\
+                    & Ayman Achbal \\
+                    & Zaid Chaairi \\[8pt]
+                    
+                    \textbf{Institution:} & Moroccan School of Engineering Sciences \\[8pt]
+                    
+                    \textbf{Module:} & Machine Learning \& Deep Learning \\[8pt]
+                    
+                    \textbf{Supervisor:} & Dr. Radouan DAHBI \\[8pt]
+                    
+                    
+                    \textbf{Presentation:} & January 20, 2026 \\
+                \end{tabular}
+                }\\[2cm]
+                
+                {\large\color{darkgray}\textit{From classical preprocessing to transformers:}}\\
+                {\large\color{darkgray}\textit{A comprehensive comparative study on the Sentiment140 dataset}}
+            \end{center}
+        };
+        
+        \node[anchor=south,text width=\textwidth,align=center] at ([yshift=1cm]current page.south) {
+            {\color{white}\rule{0.8\textwidth}{0.5pt}}\\[0.2cm]
+            {\large\color{white} Natural Language Processing}
+        };
+    \end{tikzpicture}
+\end{titlepage}
+
+\newpage
+
+\tableofcontents
+\newpage
+
+\listoffigures
+\newpage
+
+% ------------------------------------------------------------
+% Abstract
+% ------------------------------------------------------------
+\begin{abstract}
+This report presents an end-to-end sentiment analysis pipeline applied to the \textbf{Sentiment140} Twitter dataset. Starting from raw, noisy tweets, we design and implement a complete workflow that covers data cleaning, feature engineering, supervised classification with Machine Learning (ML) and Deep Learning (DL) models, transformer-based fine-tuning with BERT, as well as unsupervised exploration through clustering and dimensionality reduction.
+
+On the supervised side, we establish strong baselines using classical ML algorithms (logistic regression, linear SVM, Random Forest, Naive Bayes) trained on TF-IDF representations. We then investigate recurrent neural architectures (BiLSTM, BiGRU) on word embeddings, and finally fine-tune a pre-trained BERT base model using the HuggingFace library. The results show a clear performance hierarchy, with BERT achieving the best accuracy and F1-score, followed by bidirectional RNNs and then classical ML models.
+
+In parallel, we perform unsupervised analyses (K-Means, LDA, PCA, t-SNE) to better understand the intrinsic structure of the data. These experiments reveal that sentiment is not naturally clustered in the TF-IDF space, reinforcing the need for supervised learning. The report concludes with a comparative synthesis, a cost/benefit discussion for each model family, and concrete recommendations for deployment in real-world applications, depending on resource constraints and latency requirements.
+\end{abstract}
+
+\newpage
+
+% ------------------------------------------------------------
+% 1. Introduction and Problem Statement
+% ------------------------------------------------------------
+\section{Introduction and Problem Statement}
+
+\subsection{General Context}
+
+Social networks, and particularly Twitter, are today an essential source of information for understanding public opinion. Every day, millions of users spontaneously share their impressions about products, brands, events, or personalities. Exploiting this textual data on a large scale is a major challenge for companies and institutions.
+
+In this context, automatic sentiment analysis aims to determine whether a text expresses a positive or negative opinion. Tweets, although short (280 characters), present a very noisy informal language: abbreviations, errors, emojis, hashtags, mentions, etc. This complexity makes the classification task particularly delicate.
+
+From an industrial perspective, being able to automatically mine opinions in near real time allows companies to detect crises early, monitor the impact of marketing campaigns, and prioritize customer support. From an academic point of view, Twitter constitutes a challenging benchmark for Natural Language Processing (NLP) methods because it combines brevity, noise, and rapidly evolving vocabulary.
+
+This project is therefore at the crossroads between theoretical research on text representation and the concrete needs of organizations that wish to better understand their users.
+
+\subsection{Problem Statement}
+
+\textbf{How to automatically classify the sentiment (positive / negative) expressed in tweets by combining Machine Learning, Deep Learning, and Transformer approaches, while managing the specificities of Twitter language?}
+
+More specifically, we seek to:
+\begin{itemize}
+    \item Quantitatively compare the performance of different model families (classical ML, RNN networks, transformers).
+    \item Implement a complete pipeline, from preprocessing to potential deployment.
+    \item Identify the best compromise between accuracy, computational cost, and ease of deployment.
+\end{itemize}
+
+Beyond simple numerical comparison of models, we also aim to highlight:
+\begin{itemize}
+    \item the impact of preprocessing and feature choices on downstream performance,
+    \item the ability of models to generalize to new, unseen tweets,
+    \item practical aspects of training (training time, memory consumption, hardware requirements).
+\end{itemize}
+
+\subsection{Project Objectives}
+
+This final report synthesizes all the work carried out over several weeks. The main objectives are:
+\begin{enumerate}[label=\textbf{O\arabic*})]
+    \item Explore and understand the \textbf{Sentiment140} dataset.
+    \item Design a robust and reusable preprocessing pipeline.
+    \item Build solid \textbf{baselines} with Machine Learning models.
+    \item Experiment with \textbf{Deep Learning} models based on LSTM/GRU architectures.
+    \item Implement a \textbf{transformer model} like BERT through transfer learning.
+    \item Study \textbf{unsupervised approaches} (clustering, LDA, t-SNE) to analyze the intrinsic structure of the data.
+    \item Perform a comprehensive \textbf{comparative synthesis} of performance and propose deployment recommendations.
+\end{enumerate}
+
+\subsection{Report Outline}
+
+This document is structured as follows:
+\begin{itemize}
+    \item Section~\ref{sec:dataset} describes the Sentiment140 dataset and sampling choices.
+    \item Section~\ref{sec:pretraitement} presents the preprocessing pipeline and feature engineering.
+    \item Section~\ref{sec:ml} details the Machine Learning models and their results.
+    \item Section~\ref{sec:dl} introduces the Deep Learning models (LSTM, GRU) and discusses their performance.
+    \item Section~\ref{sec:bert} is dedicated to the fine-tuning of BERT and its analysis.
+    \item Section~\ref{sec:unsup} presents the unsupervised learning experiments (K-Means, LDA, t-SNE).
+    \item Section~\ref{sec:comparaison} provides a comparative synthesis and recommendations.
+    \item Finally, Sections~\ref{sec:limites} and~\ref{sec:conclusion} present the limitations, improvement paths, and general conclusion.
+\end{itemize}
+
+\newpage
+
+% ------------------------------------------------------------
+% 2. Sentiment140 Dataset
+% ------------------------------------------------------------
+\section{Sentiment140 Dataset}
+\label{sec:dataset}
+
+\subsection{Dataset Description}
+
+The \textbf{Sentiment140} dataset, introduced by Go et al. (2009), contains 1.6 million tweets automatically annotated by ``distant supervision'' from emoticons.
+
+\begin{itemize}
+    \item \textbf{Total volume:} 1,600,000 tweets.
+    \item \textbf{Classes:} 0 (negative) and 4 (positive), which we remap to $\{0,1\}$.
+    \item \textbf{Distribution:} perfectly balanced (800k tweets per class).
+    \item \textbf{Main fields:} \texttt{target}, \texttt{id}, \texttt{date}, \texttt{flag}, \texttt{user}, \texttt{text}.
+    \item \textbf{Dominant language:} English, with a very varied vocabulary.
+\end{itemize}
+
+For reasons of computation time and material constraints, we mainly work on \textbf{subsamples} representative of the full dataset, while ensuring to maintain class balance.
+
+The original dataset was collected in 2009 and therefore reflects Twitter usage from that period: older interface conventions, fewer emojis than in more recent years, and different trending topics. This temporal bias must be kept in mind when interpreting results and considering the transfer of the models to today's streams.
+
+\subsection{Used Datasets}
+
+We created different datasets throughout the experiments:
+
+\begin{itemize}
+    \item \textbf{ML Set (100k tweets):} 50,000 positive and 50,000 negative tweets, used for ML baselines and initial exploration.
+    \item \textbf{DL Set (\textasciitilde 100k tweets):} same order of magnitude, but represented by tokenized sequences for LSTM/GRU networks.
+    \item \textbf{BERT Set (100k tweets):} 50,000 positive and 50,000 negative, sufficient for efficient fine-tuning of the pre-trained model.
+    \item \textbf{Unsupervised Set (20k tweets):} sample used for clustering and dimensionality reduction (TF-IDF + t-SNE).
+\end{itemize}
+
+All samples are built using a fixed random seed in order to ensure \textbf{reproducibility} of the experiments. For each subset, we systematically verify that the class distribution remains balanced and that there is no trivial overlap between training, validation, and test splits. In addition, we check that the user identifiers are not heavily repeated across splits to limit user-level data leakage.
+
+\subsection{Descriptive Statistics}
+
+On the ML sample of 100,000 tweets:
+
+\begin{itemize}
+    \item Average length: 110--120 characters.
+    \item Average number of words: 15--18 per tweet.
+    \item No missing values in the \texttt{text} field.
+    \item Perfectly balanced class distribution (50\% positive / 50\% negative).
+\end{itemize}
+
+Visualizations (histograms, pie charts) confirm this balance and highlight a rich vocabulary, marked by the presence of typical social media terms (``lol'', ``omg'', ``haha'', etc.).
+
+We also observe a strong presence of informal spelling (elongated words like ``soooo happy''), slang, and code-switching phenomena (mixture of English with other languages). These properties motivate the choice of robust models capable of capturing context and not relying solely on exact word forms.
+
+Finally, an analysis of the most frequent unigrams and bigrams shows that some terms correlate strongly with sentiment labels (``love'', ``great'' vs. ``hate'', ``worst''), but many tweets remain ambiguous, which justifies the use of sophisticated models beyond simple lexicon-based rules.
+
+To better illustrate these descriptive statistics, we include several visualizations generated during the exploratory analysis.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{visuals/charts/sentiment_distribution.png}
+    \caption{Distribution of sentiment labels in the sampled Sentiment140 datasets.
+    The perfectly balanced proportions confirm that no class imbalance is introduced during the subsampling process.}
+    \label{fig:sentiment-distribution}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{visuals/charts/text_statistics.png}
+    \caption{Basic text statistics (tweet length, number of tokens, and related measures) on the cleaned sample.
+    The distributions reflect the short, informal, and highly variable nature of Twitter messages.}
+    \label{fig:text-statistics}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{visuals/charts/top_words_by_sentiment.png}
+    \caption{Most frequent words by sentiment class, highlighting strongly polarizing lexical patterns.
+    Positive tweets are dominated by affective expressions, whereas negative tweets emphasize dissatisfaction-related terms.}
+    \label{fig:top-words-sentiment}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{visuals/wordclouds/sentiment_wordclouds.png}
+    \caption{Word clouds summarizing the most frequent tokens in positive and negative tweets.
+    The visual contrast illustrates clear lexical differences between sentiment classes.}
+    \label{fig:sentiment-wordclouds}
+\end{figure}
+
+In addition to the combined visualization, Figures~\ref{fig:wordcloud-positive} and~\ref{fig:wordcloud-negative} show separate word clouds for positive and negative tweets, which make the contrast between the two vocabularies even clearer.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\textwidth]{visuals/wordclouds/positive.png}
+    \caption{Word cloud for positive tweets only.
+    Frequent terms mainly express satisfaction, enthusiasm, and positive affect.}
+    \label{fig:wordcloud-positive}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{visuals/wordclouds/negative.png}
+    \caption{Word cloud for negative tweets only.
+    Dominant terms emphasize complaints, frustration, and negative user experiences.}
+    \label{fig:wordcloud-negative}
+\end{figure}
+
+\newpage
+
+% ------------------------------------------------------------
+% 3. Preprocessing and Feature Engineering
+% ------------------------------------------------------------
+\section{Preprocessing and Feature Engineering}
+\label{sec:pretraitement}
+
+\subsection{Cleaning Pipeline}
+
+To reduce the inherent noise in tweets, we designed a uniform preprocessing pipeline, used for both ML and DL models:
+
+\begin{enumerate}
+    \item \textbf{Lowercasing} to homogenize vocabulary.
+    \item \textbf{URL removal} (\texttt{http(s)://} and \texttt{www.} patterns).
+    \item \textbf{Mention removal} (\texttt{@username}).
+    \item \textbf{Hashtag removal} (removing the \# symbol while keeping the word, depending on experiments).
+    \item \textbf{Special character and digit removal}, keeping only letters and spaces.
+    \item \textbf{Space normalization} (replacing multiple space sequences with a single one).
+\end{enumerate}
+
+The cleaned data is saved in the file \texttt{data/processed/cleaned\_tweets.csv}. On the ML sample, we retain about 99.8\% of tweets after cleaning while maintaining class balance.
+
+The cleaning choices represent a trade-off between aggressiveness and information preservation. For example, completely removing URLs simplifies the text and reduces vocabulary size, but also removes potentially informative cues (links to news articles, videos, or commercial sites). In the context of this project, we favor a generic and domain-independent pipeline that can be easily reused on other corpora.
+
+In practice, cleaning is implemented as a modular Python function that can be applied identically in notebooks and in a future production API. This function is unit-tested on a small set of synthetic tweets to verify the correct handling of URLs, mentions, hashtags, and special characters.
+
+\subsection{Handling Emojis, Emoticons and Negations}
+
+An important particularity of Twitter is the high frequency of emojis and emoticons. In the current version of the pipeline, most of these symbols are removed during the filtering of non-alphabetic characters. This simplifies the text but also causes a loss of emotional information.
+
+To partially mitigate this, we pay particular attention to \textbf{negation handling}. Before removing punctuation, we retain constructions such as ``not good'', ``can't wait'', or ``never again'' as they play a central role in sentiment polarity. In future iterations, mapping emojis to sentiment tokens (e.g. ``:-)'' $\rightarrow$ ``EMO\_POS'') could further enrich the signal available to models.
+
+\subsection{TF-IDF Vectorization for ML Models}
+
+For Machine Learning algorithms, we use a \textbf{TF-IDF} (Term Frequency -- Inverse Document Frequency) representation.
+
+The TF-IDF measure of a term $t$ in a document $d$ is defined by:
+\begin{equation}
+    \text{TF-IDF}(t,d) = \text{TF}(t,d) \times \log \left( \frac{N}{df(t)} \right),
+\end{equation}
+\noindent where $N$ is the total number of documents and $df(t)$ is the number of documents containing term $t$.
+
+\subsubsection{Vectorizer Parameters}
+
+\begin{itemize}
+    \item \textbf{Vocabulary size:} 10,000 most frequent terms.
+    \item \textbf{N-grams:} unigrams and bigrams $(1,2)$.
+    \item \textbf{Minimum frequency:} occurrence in at least 5 documents.
+    \item \textbf{Sublinear TF:} use of $1 + \log(\text{TF})$.
+    \item \textbf{Normalization:} $\ell_2$ on each document vector.
+\end{itemize}
+
+The obtained matrix is of size $100,000 \times 10,000$, very sparse (sparsity \textasciitilde 99\%), which is perfectly suited for linear models.
+
+In addition to these parameters, several preliminary experiments were carried out to evaluate the influence of vocabulary size and n-gram range. Increasing the vocabulary to 30,000 words brings only marginal gains while significantly increasing memory usage. Conversely, restricting to unigrams $(1,1)$ slightly degrades performance, confirming the importance of capturing short expressions and local context through bigrams.
+
+\subsection{Representation for Deep Learning Models}
+
+For LSTM/GRU models, we use classical tokenization:
+
+\begin{itemize}
+    \item Vocabulary limited to \textbf{20,000 words}.
+    \item Maximum sequence length: \textbf{100 tokens} (padding / truncation).
+    \item Dense embeddings of dimension \textbf{128}.
+    \item Random initialization of embeddings (improvement paths with GloVe/Word2Vec).
+\end{itemize}
+
+The choice of a fixed maximum length of 100 tokens is guided by the empirical distribution of tweet lengths: more than 95\% of tweets contain fewer than 40 tokens after cleaning. Thus, 100 tokens provide a comfortable margin while controlling computation time. Padding is performed at the end of sequences, and the corresponding positions are masked in the recurrent layers so as not to bias the activations.
+
+Although we rely on randomly initialized embeddings in this project, the architecture is designed to easily integrate pre-trained vectors (GloVe, FastText) in future work, which could further improve generalization.
+
+\subsection{Inputs for BERT}
+
+The BERT model expects specific inputs:
+
+\begin{itemize}
+    \item Tokenization using the WordPiece tokenizer of \texttt{bert-base-uncased}.
+    \item Addition of \texttt{[CLS]} (start) and \texttt{[SEP]} (end) tokens.
+    \item Truncation / padding to a maximum length of 64 tokens.
+    \item Attention mask indicating valid positions.
+\end{itemize}
+
+Unlike the previous representations, BERT directly operates on subword units, which allows it to decompose unknown words or creative spellings into smaller pieces present in its vocabulary. This property is particularly useful for handling the inventive writing style found on Twitter (hashtags concatenating several words, user-specific nicknames, etc.).
+
+\newpage
+
+% ------------------------------------------------------------
+% 4. Machine Learning Models
+% ------------------------------------------------------------
+\section{Machine Learning Baselines}
+\label{sec:ml}
+
+\subsection{Experimental Protocol}
+
+For ML baselines, we use the sample of 100,000 tweets vectorized with TF-IDF. The data split is as follows:
+
+\begin{itemize}
+    \item \textbf{Training:} 80\% (80,000 tweets).
+    \item \textbf{Test:} 20\% (20,000 tweets).
+    \item Stratified split to preserve class balance.
+\end{itemize}
+
+The calculated metrics are accuracy, precision, recall, and F1-score.
+
+In order to stabilize the estimates, some models are trained several times with different random initializations, and we verify that the variance of the metrics remains limited (on the order of $\pm 0.3$ accuracy points). This gives confidence that the conclusions drawn from the comparison are not due to a particular random seed.
+
+\subsection{Evaluation Metrics}
+
+For a binary classification problem, let $TP$, $TN$, $FP$, and $FN$ denote true positives, true negatives, false positives, and false negatives, respectively. The main metrics are defined as follows:
+\begin{align}
+    \text{Accuracy} &= \frac{TP + TN}{TP + TN + FP + FN}, \\
+    \text{Precision} &= \frac{TP}{TP + FP}, \\
+    \text{Recall} &= \frac{TP}{TP + FN}, \\
+    \text{F1-score} &= 2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}.
+\end{align}
+
+In practice, we compute these quantities using scikit-learn's built-in functions, and we report macro-averaged scores over the two classes, which is appropriate given the balanced nature of the dataset.
+
+\subsection{Implemented Models}
+
+We tested four classical algorithms:
+
+\begin{enumerate}
+    \item \textbf{Logistic Regression} (LR) with L2 regularization.
+    \item Linear \textbf{Support Vector Machine} (SVM).
+    \item \textbf{Random Forest} of 100 trees.
+    \item \textbf{Multinomial Naive Bayes}.
+\end{enumerate}
+
+Hyperparameters were chosen reasonably and then slightly adjusted by simple validation.
+
+For logistic regression and linear SVM, we use the \texttt{liblinear} or \texttt{linearSVC} solvers, which are well adapted to high-dimensional sparse data. The regularization strength parameter $C$ is tuned on a coarse grid (for example $C \in \{0.1, 1, 10\}$), selecting the value that maximizes validation F1-score. For Random Forests, we adjust the number of trees and maximum depth to balance bias and variance while keeping training time reasonable.
+
+\subsection{Quantitative Results}
+
+Table~\ref{tab:ml-results-final} summarizes the final results obtained on the test set (20k tweets).
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Model} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+        \midrule
+        Logistic Regression & \textbf{0.7919} & \textbf{0.7882} & \textbf{0.7980} & \textbf{0.7931} \\
+        SVM (linear)       & 0.7856 & 0.7801 & 0.7952 & 0.7876 \\
+        Random Forest          & 0.7311 & 0.7162 & 0.7651 & 0.7399 \\
+        Naive Bayes            & 0.7600 & 0.7650 & 0.7500 & 0.7570 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Performance of Machine Learning models on Sentiment140 (20k test tweets).}
+    \label{tab:ml-results-final}
+\end{table}
+
+The results show that linear models (LR and SVM) exploit the sparse TF-IDF representation very well, with a slight superiority of logistic regression.
+
+In order to better understand the types of errors made by these models, we also analyze their confusion matrices.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{visuals/confusion_matrices/logistic_regression_cm.png}
+    \caption{Confusion matrix for the logistic regression model on the test set.}
+    \label{fig:cm-logreg}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.66\textwidth]{visuals/confusion_matrices/svm_linearsvc_cm.png}
+    \caption{Confusion matrix for the linear SVM model on the test set.}
+    \label{fig:cm-svm}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.66\textwidth]{visuals/confusion_matrices/random_forest_cm.png}
+    \caption{Confusion matrix for the Random Forest model on the test set.}
+    \label{fig:cm-rf}
+\end{figure}
+
+Beyond global metrics, we also inspect the confusion matrices of the best ML models. Logistic regression tends to make slightly more false positives than false negatives, which can be acceptable in some applications (e.g., detecting at-risk customers where it is preferable to over-alert rather than miss a critical case). The analysis of misclassified examples reveals many borderline tweets (sarcasm, ambiguous expressions) for which even a human annotator might hesitate.
+
+\subsection{Analysis}
+
+\subsubsection{Logistic Regression -- Best ML Model}
+
+Logistic regression achieves the best overall performance among ML models:
+
+\begin{itemize}
+    \item \textbf{Accuracy:} 78.50\%.
+    \item \textbf{F1-Score:} 78.20\%.
+    \item \textbf{Training time:} about 2 minutes.
+    \item \textbf{Model size:} \textasciitilde 20k parameters.
+\end{itemize}
+
+It presents an excellent compromise between performance, speed, and interpretability (weights associated with each n-gram).
+
+\subsubsection{Comparison with Other Models}
+
+\begin{itemize}
+    \item \textbf{Linear SVM} offers very close performance (78.2\% accuracy, 78.0\% F1), at the cost of longer training.
+    \item \textbf{Random Forest} is significantly less performant (76.5\% accuracy), with a higher computational cost.
+    \item \textbf{Naive Bayes} remains very competitive given its simplicity (76.0\% accuracy) and training time of \textasciitilde 1 minute.
+\end{itemize}
+
+These results constitute a \textbf{robust baseline} for evaluating the gains brought by Deep Learning models and transformers.
+
+\newpage
+
+% ------------------------------------------------------------
+% 5. Deep Learning Models (LSTM/GRU)
+% ------------------------------------------------------------
+\section{Deep Learning Models based on LSTM/GRU}
+\label{sec:dl}
+
+\subsection{Tested Architectures}
+
+We experimented with several variants of recurrent networks:
+
+\begin{itemize}
+    \item Simple LSTM.
+    \item Bidirectional LSTM (BiLSTM).
+    \item Simple GRU.
+    \item Bidirectional GRU (BiGRU).
+\end{itemize}
+
+Each model includes:
+
+\begin{itemize}
+    \item An embedding layer of dimension 128.
+    \item One or two recurrent layers (LSTM or GRU) with dropout.
+    \item A final dense layer with sigmoid activation for binary classification.
+\end{itemize}
+
+\subsection{Training Configuration}
+
+\begin{itemize}
+    \item Optimizer: Adam (learning rate $10^{-3}$).
+    \item Batch size: 128.
+    \item Number of epochs: 5--8 depending on models.
+    \item Early stopping on validation loss.
+\end{itemize}
+
+We reserve 10\% of the training set as a validation set for monitoring the learning curves. Early stopping with a patience of 2 epochs allows us to automatically stop training once the model stops improving on the validation loss, thus limiting overfitting. We also apply dropout between recurrent and dense layers to further regularize the networks.
+
+The evolution of the training and validation metrics for the best recurrent architecture is shown in Figure~\ref{fig:lstm-history}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{visuals/charts/lstm_model_history.png}
+    \caption{Training and validation accuracy/loss curves for the BiLSTM model.}
+    \label{fig:lstm-history}
+\end{figure}
+
+In order to better understand the learning dynamics of the other recurrent models, we also track their training and validation curves. Figures~\ref{fig:bigru-history} and~\ref{fig:gru-history} illustrate how the BiGRU converges correctly, while the simple GRU quickly gets stuck around chance level.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{visuals/charts/dl_bigru_training_history.png}
+    \caption{Training and validation accuracy/loss curves for the BiGRU model. The validation performance stabilizes around 0.78 accuracy, in line with the quantitative results.}
+    \label{fig:bigru-history}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{visuals/charts/dl_gru_training_history.png}
+    \caption{Training and validation curves for the simple GRU model. The model remains stuck close to 0.5 accuracy with a loss around $\log(2)$, confirming its failure to learn a useful decision boundary.}
+    \label{fig:gru-history}
+\end{figure}
+
+\subsection{Quantitative Results}
+
+Table~\ref{tab:dl-results} presents the performances measured on the test set.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Model} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+        \midrule
+        BiLSTM & \textbf{0.8006} & \textbf{0.8300} & 0.7656 & \textbf{0.7967} \\
+        BiGRU  & 0.7796 & 0.7869 & 0.7473 & 0.7666 \\
+        Simple LSTM & 0.4900 & 0.0000 & 0.0000 & 0.0000 \\
+        Simple GRU  & 0.4900 & 0.0000 & 0.0000 & 0.0000 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Performance of Deep Learning models.}
+    \label{tab:dl-results}
+\end{table}
+
+Beyond global scores, it is informative to look at the distribution of errors for each architecture. The following confusion matrices highlight the difference between successful bidirectional models and failing unidirectional ones.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{visuals/confusion_matrices/dl_bilstm_confusion_matrix.png}
+    \caption{Confusion matrix for the BiLSTM model on the test set. Most tweets are correctly classified, with a fairly balanced error rate between positive and negative classes.}
+    \label{fig:cm-bilstm}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{visuals/confusion_matrices/dl_bigru_confusion_matrix.png}
+    \caption{Confusion matrix for the BiGRU model. The overall structure is similar to BiLSTM but with slightly more confusion between positive and negative tweets.}
+    \label{fig:cm-bigru}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{visuals/confusion_matrices/dl_gru_confusion_matrix.png}
+    \caption{Confusion matrix for the simple GRU model. Almost all tweets are predicted as the same class, which explains the accuracy close to random and the null F1-score reported in Table~\ref{tab:dl-results}.}
+    \label{fig:cm-gru}
+\end{figure}
+
+\subsection{Analysis: Importance of Bidirectionality}
+
+The results highlight two marked phenomena:
+
+\begin{enumerate}
+    \item \textbf{Bidirectional} models (BiLSTM, BiGRU) clearly outperform simple models.
+    \item Simple models (LSTM, GRU) \textbf{completely fail}: accuracy \textasciitilde 49\%, which corresponds to chance for a binary problem.
+\end{enumerate}
+
+Training curves show that unidirectional networks remain stuck around a loss of 0.693 (log(2)), a symptom of inefficient learning (vanishing gradients, poor hyperparameter choices). In contrast, bidirectional architectures converge correctly.
+
+The BiLSTM thus reaches
+\begin{itemize}
+    \item 80.06\% accuracy,
+    \item 79.67\% F1-score,
+    \item with a training time of about 10 minutes
+\end{itemize}
+versus 2 minutes for logistic regression.
+
+These results suggest that simply increasing model complexity is not sufficient: it is crucial to choose an architecture compatible with the characteristics of the data. In our case, bidirectionality enables the network to take into account both the left and right context of each token, which is particularly important for short texts where each word can significantly influence the overall polarity.
+
+\subsection{Comparison with ML Baselines}
+
+Compared to the best ML model (logistic regression at 78.5\% accuracy), BiLSTM offers:
+
+\begin{itemize}
+    \item An absolute gain of \textbf{about 1.5 accuracy points}.
+    \item A superior F1-score by \textasciitilde 1.6 points.
+    \item A significantly higher computational cost (10 minutes of training, model \textasciitilde 2M parameters).
+\end{itemize}
+
+Thus, bidirectional RNN networks constitute a \textbf{moderate improvement} in performance but with a significant overhead, raising the question of the cost/benefit ratio compared to transformers.
+
+In addition, RNN-based models require more careful engineering for efficient deployment (sequence batching, handling variable lengths, potential use of GPU). In contrast, linear models can be easily embedded in a lightweight microservice and scaled horizontally with minimal infrastructure.
+
+\newpage
+
+% ------------------------------------------------------------
+% 6. Transformer Model BERT
+% ------------------------------------------------------------
+\section{BERT Fine-tuning on Sentiment140}
+\label{sec:bert}
+
+\subsection{Architecture and Training Strategy}
+
+We use the \textbf{BERT base uncased} model (110M parameters) available in the \texttt{HuggingFace Transformers} library. The main characteristics are:
+
+\begin{itemize}
+    \item 12 transformer layers.
+    \item 12 attention heads.
+    \item Hidden dimension of 768.
+    \item Pre-trained on a massive corpus (BooksCorpus + Wikipedia, \textasciitilde 3.3 billion words).
+\end{itemize}
+
+For fine-tuning on Sentiment140, we add on top of BERT a simple dense classification head (dropout + linear layer) that uses the final representation of the \texttt{[CLS]} token. All BERT layers are unfrozen and updated during training, which allows the model to adapt its internal representations to the specificities of tweets.
+
+\subsection{Experimental Configuration}
+
+\begin{itemize}
+    \item Sample size: 100,000 tweets (50k positive, 50k negative).
+    \item Split: 80\% train, 10\% validation, 10\% test.
+    \item Max length: 64 tokens.
+    \item Batch size: 32.
+    \item Number of epochs: 3.
+    \item Optimizer: AdamW, learning rate $2 \times 10^{-5}$.
+    \item Training performed on GPU (Tesla T4) in about 39 minutes.
+\end{itemize}
+
+We use a classic linear learning rate warmup followed by decay, as recommended in the literature for transformer fine-tuning. The relatively small number of epochs (3) proves sufficient to reach good performance while limiting overfitting and excessive training time. Gradient clipping is also applied to stabilize training.
+
+Figure~\ref{fig:bert-history} summarizes the evolution of the loss and validation accuracy during fine-tuning. We observe a regular decrease of the training loss while the validation accuracy stabilizes around 0.82, which is consistent with the final metrics reported below.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{visuals/charts/bert_training_history.png}
+    \caption{Training and validation curves for BERT fine-tuning on Sentiment140. The validation accuracy quickly plateaus, indicating that three epochs are sufficient.}
+    \label{fig:bert-history}
+\end{figure}
+
+\subsection{Achieved Performance}
+
+On the test set, BERT achieves the following scores:
+
+\begin{itemize}
+    \item \textbf{Accuracy:} 0.8255 (82.55\%).
+    \item \textbf{Precision:} 0.8290 (82.90\%).
+    \item \textbf{Recall:} 0.8192 (81.92\%).
+    \item \textbf{F1-score:} 0.8241 (82.41\%).
+\end{itemize}
+
+The corresponding confusion matrix is:
+
+\begin{center}
+\begin{tabular}{c|cc}
+    & Predicted 0 & Predicted 1 \\
+    \hline
+    Actual 0 & 4168 & 843 \\
+    Actual 1 & 902  & 4087 \\
+\end{tabular}
+\end{center}
+
+For completeness, Figure~\ref{fig:cm-bert} shows the same information as a heatmap. The matrix is relatively well balanced, with slightly more false negatives than false positives.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{visuals/confusion_matrices/bert_confusion_matrix.png}
+    \caption{Confusion matrix for the fine-tuned BERT model on the test set.}
+    \label{fig:cm-bert}
+\end{figure}
+
+These results are significantly superior to previous models:
+
+\begin{itemize}
+    \item +2.49 accuracy points compared to BiLSTM.
+    \item +4.05 accuracy points compared to logistic regression.
+    \item Significant improvement in recall (81.9\% vs 76.6\% for BiLSTM).
+\end{itemize}
+
+\subsection{Qualitative Analysis}
+
+Examples of predictions show that BERT better handles:
+
+\begin{itemize}
+    \item Complex negative constructions (``not bad at all'').
+    \item Sarcasm and irony, to some extent.
+    \item Idiomatic expressions and slangs.
+\end{itemize}
+
+This confirms the contribution of
+\begin{enumerate}
+    \item pre-training on a massive corpus,
+    \item bidirectional attention,
+    \item rich contextual representation.
+\end{enumerate}
+
+Nevertheless, some errors remain, particularly in the presence of strong sarcasm, double negations, or complex cultural references. For instance, tweets such as ``Great, another Monday morning traffic jam'' are sometimes incorrectly classified as positive due to the presence of seemingly positive words. This illustrates that even powerful models like BERT have limitations when the sentiment is strongly context-dependent or relies on world knowledge.
+
+\newpage
+
+% ------------------------------------------------------------
+% 7. Unsupervised Learning
+% ------------------------------------------------------------
+\section{Unsupervised Learning: Clustering and Visualization}
+\label{sec:unsup}
+
+\subsection{Objectives}
+
+The objective of this part is to study whether positive and negative tweets naturally form separate groups in the TF-IDF feature space, without using labels. We consider:
+
+\begin{itemize}
+    \item \textbf{K-Means} clustering,
+    \item \textbf{Topic modeling} via LDA,
+    \item \textbf{Dimensionality reduction} with PCA and t-SNE.
+\end{itemize}
+
+Experiments are conducted on a \textbf{sample of 20,000 tweets} previously vectorized with TF-IDF.
+
+The use of a reduced sample is motivated by the high computational cost of algorithms such as t-SNE, whose complexity grows at least quadratically with the number of points. This sample, however, is large enough to reveal the main structural phenomena in the data.
+
+\subsection{K-Means Clustering}
+
+We vary the number of clusters $K$ from 2 to 10, evaluating:
+
+\begin{itemize}
+    \item the average silhouette coefficient,
+    \item the intra-cluster inertia.
+\end{itemize}
+
+The results show:
+
+\begin{itemize}
+    \item For $K=2$ (naive hypothesis ``positive vs negative''), the silhouette coefficient is \textbf{very low}: 0.0088.
+    \item The relative optimum is reached around $K=9$ with a silhouette of \textbf{0.0168}, still extremely low.
+    \item The clusters for $K=2$ are strongly imbalanced (about 17,075 tweets in one cluster and 2,925 in the other).
+\end{itemize}
+
+An analysis of the proportions of real labels in each cluster (for $K=2$) shows:
+
+\begin{itemize}
+    \item Cluster 0: \textasciitilde 65.6\% positive tweets.
+    \item Cluster 1: \textasciitilde 53.3\% negative tweets.
+\end{itemize}
+
+These figures are close to random and indicate that the data structure is not naturally separable into two groups corresponding to sentiments.
+
+We also test alternative distance measures (cosine distance instead of Euclidean) and initialization strategies (\texttt{k-means++}), but the overall conclusions remain unchanged: sentiment labels do not correspond to well-separated clusters in the TF-IDF space. This is consistent with the idea that sentiment often depends on subtle interactions between words and on context that is difficult to capture with a purely bag-of-words representation.
+
+\subsection{Topic Modeling with LDA}
+
+Applying LDA (Latent Dirichlet Allocation) with 5 topics, we obtain interpretable themes:
+
+\begin{itemize}
+    \item \textbf{Topic 0 -- Daily activities}: neutral vocabulary, 50/50 sentiment.
+    \item \textbf{Topic 1 -- Night / sleep}: 58.7\% negative tweets (fatigue, insomnia).
+    \item \textbf{Topic 2 -- Technology / social}: 52.3\% negative (bugs, frustrations).
+    \item \textbf{Topic 3 -- Events / outings}: balanced distribution.
+    \item \textbf{Topic 4 -- Positive expressions}: 57.1\% positive tweets (``love'', ``great'', etc.).
+\end{itemize}
+
+LDA thus allows to extract semantic themes, but not to reconstruct a clear boundary between sentiments.
+
+\subsection{Dimensionality Reduction: PCA and t-SNE}
+
+\subsubsection{PCA}
+
+A PCA on the TF-IDF vectors shows that the first 50 components explain only about \textbf{24.88\%} of the total variance, revealing the high dispersion of features in the high-dimensional space.
+
+\subsubsection{t-SNE 2D and 3D}
+
+We then apply t-SNE to obtain 2D and 3D visualizations.
+
+Figure~\ref{fig:tsne-2d} shows the 2D projection colored first by sentiment label and then by K-Means cluster. The strong overlap between red (positive) and blue (negative) points confirms the absence of a clear linear separation in this space, while the cluster coloring highlights that K-Means mainly captures density variations rather than sentiment.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{visuals/charts/tsne_2d_sentiment_clusters.png}
+    \caption{2D t-SNE visualization. Left: points colored by sentiment label (positive vs negative). Right: same projection colored by K-Means cluster assignment.}
+    \label{fig:tsne-2d}
+\end{figure}
+
+In 3D (Figure~\ref{fig:tsne-3d}), the point cloud forms an almost spherical shape where positive and negative tweets are completely mixed. Rotating the visualization does not reveal any hidden structure either, which reinforces the idea that sentiment is not aligned with a small number of dominant directions in the TF-IDF space.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{visuals/charts/tsne_3d_sentiment.png}
+    \caption{3D t-SNE visualization colored by sentiment label. The two classes are strongly intertwined throughout the representation.}
+    \label{fig:tsne-3d}
+\end{figure}
+
+These observations confirm that, in the TF-IDF space, tweets do not present a naturally separable structure by simple unsupervised clustering. Sentiment labels do not correspond to well-defined groups, justifying the use of supervised learning. Nevertheless, these visualizations remain useful for spotting potential annotation errors, near-duplicate tweets, or particular subgroups (for example clusters dominated by very short tweets or containing specific hashtags).
+
+\newpage
+
+% ------------------------------------------------------------
+% 8. Comparative Synthesis and Discussion
+% ------------------------------------------------------------
+\section{Comparative Synthesis of Models}
+\label{sec:comparaison}
+
+\subsection{Global Results}
+
+Table~\ref{tab:global-comparison} summarizes the performance of the main supervised models (ignoring the failed unidirectional RNNs).
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcccccc}
+        \toprule
+        \textbf{Model} & \textbf{Type} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Time}\footnotemark \\
+        \midrule
+        Naive Bayes         & ML & 0.7600 & 0.7650 & 0.7500 & 0.7570 & \textasciitilde 1 min \\
+        Random Forest       & ML & 0.7311 & 0.7162 & 0.7651 & 0.7399 & \textasciitilde 8 min \\
+        SVM (linear)    & ML & 0.7856 & 0.7801 & 0.7952 & 0.7876 & \textasciitilde 5 min \\
+        Logistic Regression   & ML & 0.7919 & 0.7882 & 0.7980 & 0.7931 & \textasciitilde 2 min \\
+        BiGRU              & DL & 0.7796 & 0.7869 & 0.7473 & 0.7666 & \textasciitilde 8 min \\
+        BiLSTM             & DL & 0.8006 & 0.8300 & 0.7656 & 0.7967 & \textasciitilde 10 min \\
+        BERT base          & TRF & \textbf{0.8255} & 0.8290 & \textbf{0.8192} & \textbf{0.8241} & \textasciitilde 39 min \\
+        \bottomrule
+    \end{tabular}
+    \caption{Global comparison of supervised models (final results).}
+    \label{tab:global-comparison}
+\end{table}
+\footnotetext{Indicative training time on GPU (DL/TRF) or CPU (ML).}
+
+\subsection{Best Models by Metric}
+
+\begin{itemize}
+    \item \textbf{Maximum accuracy:} BERT (82.55\%).
+    \item \textbf{Maximum precision:} BiLSTM (83.00\%), slightly ahead of BERT (82.90\%).
+    \item \textbf{Maximum recall:} BERT (81.92\%).
+    \item \textbf{Best F1-score:} BERT (82.41\%).
+\end{itemize}
+
+Thus, BERT is the \textbf{best overall model}, while BiLSTM remains very competitive, particularly in terms of precision.
+
+\subsection{Comparison by Model Family}
+
+Averaging the performance of models from the same family, we obtain:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Type} & \textbf{Avg. Accuracy} & \textbf{Avg. Precision} & \textbf{Avg. Recall} & \textbf{Avg. F1} \\
+        \midrule
+        Machine Learning & 0.7672 & 0.7624 & 0.7771 & 0.7694 \\
+        Deep Learning (BiLSTM, BiGRU) & 0.7901 & 0.8085 & 0.7565 & 0.7817 \\
+        Transformer (BERT) & \textbf{0.8255} & \textbf{0.8290} & \textbf{0.8192} & \textbf{0.8241} \\
+        \bottomrule
+    \end{tabular}
+    \caption{Average performance by model type.}
+\end{table}
+
+A clear progression is observed: \textbf{ML < DL < Transformer}. However, the gain between ML and DL remains moderate (around 2--3 accuracy points), while moving to transformers brings a \textbf{net gain of over 4 points}.
+
+To visualize this global comparison more intuitively, Figure~\ref{fig:model-comparison} presents the main models side by side.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{visuals/charts/model_comparison.png}
+    \caption{Overview of the main supervised models on Sentiment140 (aggregated comparison of accuracy and F1-score).}
+    \label{fig:model-comparison}
+\end{figure}
+
+In addition, Figure~\ref{fig:model-metrics-detailed} provides a more detailed view, breaking down accuracy, precision, recall, and F1-score across all models. This makes it easier to see, for example, that BERT dominates on recall while BiLSTM slightly leads on precision.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{visuals/charts/models_metrics_detailed.png}
+    \caption{Detailed bar-chart comparison of accuracy, precision, recall, and F1-score for each supervised model.}
+    \label{fig:model-metrics-detailed}
+\end{figure}
+
+It is important to emphasize that this progression is not only quantitative but also qualitative. Transformer-based models, and BERT in particular, better capture long-range dependencies and complex linguistic phenomena, leading to more robust predictions on ambiguous or noisy tweets. On the other hand, they are more difficult to interpret than linear models, which offer direct access to the most influential n-grams via their learned weights.
+
+\subsection{Cost / Benefit Analysis}
+
+\begin{itemize}
+    \item \textbf{ML:} correct performance (77--78.5\%), fast training (1--8 min), lightweight and easily deployable models. Ideal for resource-constrained environments.
+    \item \textbf{DL:} slight performance improvement (BiLSTM at 80\%), but at the cost of heavier and slower models to train.
+    \item \textbf{BERT:} best performance, especially in recall, but much higher computational cost and model size (110M parameters).
+\end{itemize}
+
+Depending on the application context:
+
+\begin{itemize}
+    \item For a real-time API with strong latency constraints, a \textbf{logistic regression} or a compressed \textbf{BiLSTM} may suffice.
+    \item For offline analyses where maximum accuracy is sought, \textbf{BERT} is clearly recommended.
+\end{itemize}
+
+In a production setting, the choice of model can thus be seen as a point on a Pareto frontier between accuracy, latency, memory footprint, and development complexity. One viable strategy is to deploy a light model (logistic regression) as a first filter and to reserve BERT for difficult or high-stakes cases, identified for example by a confidence score.
+
+\newpage
+
+% ------------------------------------------------------------
+% 9. Limitations and Improvement Paths
+% ------------------------------------------------------------
+\section{Limitations and Improvement Paths}
+\label{sec:limites}
+
+\subsection{Identified Limitations}
+
+\begin{enumerate}
+    \item \textbf{Dataset subsampling:} we only used a fraction (50k or 100k tweets) of the available 1.6M tweets, for reasons of time and resources.
+    \item \textbf{Partial management of emojis and emoticons:} they are mostly removed, while they carry strong affective charge.
+    \item \textbf{Simple tokenization for RNNs:} no pre-trained embeddings (GloVe, FastText), which may limit their potential.
+    \item \textbf{Little hyperparameter search:} values were chosen reasonably but without in-depth optimization (grid search, Bayesian, etc.).
+    \item \textbf{BERT not optimized for inference:} no quantization or distillation, making deployment more expensive.
+\end{enumerate}
+
+We also note that all experiments were conducted on English tweets only. Extending the approach to multilingual data would require additional efforts, such as the use of multilingual transformers and the adaptation of preprocessing to language-specific phenomena.
+
+\subsection{Technical Improvement Paths}
+
+\subsubsection{Data Enrichment}
+
+\begin{itemize}
+    \item Use the entirety of the 1.6M tweets to train DL/transformer models.
+    \item Apply data augmentation (paraphrases, back-translation, synonyms).
+    \item Preserve and explicitly encode emojis (mapping to sentiment tokens).
+\end{itemize}
+
+\subsubsection{Model Improvement}
+
+\begin{itemize}
+    \item Test transformer variants (RoBERTa, DistilBERT, ALBERT, TinyBERT).
+    \item Add attention mechanisms on top of BiLSTMs.
+    \item Use pre-trained embeddings (GloVe, FastText) for RNN networks.
+\end{itemize}
+
+\subsubsection{Optimization for Deployment}
+
+\begin{itemize}
+    \item BERT compression by quantization (INT8) and pruning.
+    \item Distillation to a smaller model like DistilBERT.
+    \item Export to ONNX / TensorRT to accelerate inference.
+\end{itemize}
+
+Beyond these technical directions, collaboration with domain experts (marketing, customer support, etc.) could help define more refined sentiment categories (e.g., ``frustration'', ``enthusiasm'', ``neutral information'') and design specific evaluation scenarios more representative of real operational constraints.
+
+\newpage
+
+% ------------------------------------------------------------
+% 10. General Conclusion
+% ------------------------------------------------------------
+\section{General Conclusion}
+\label{sec:conclusion}
+
+This project allowed for the in-depth development and comparison of several sentiment analysis approaches on the \textbf{Sentiment140} dataset. The main achievements can be summarized as follows:
+
+\begin{itemize}
+    \item Implementation of a \textbf{complete pipeline} from tweet cleaning to the evaluation of advanced models.
+    \item Solid \textbf{ML baselines} (logistic regression, SVM, Random Forest, Naive Bayes) reaching up to 78.5\% accuracy.
+    \item Implementation of \textbf{Deep Learning models} (BiLSTM and BiGRU) improving accuracy up to 80.06\%.
+    \item Successful fine-tuning of a \textbf{pre-trained BERT model}, achieving 82.55\% accuracy and 82.41\% F1-score, the best model of the project.
+    \item \textbf{Unsupervised study} showing that sentiments do not naturally structure into well-separated clusters in the TF-IDF space.
+    \item Production of a \textbf{detailed comparative synthesis} to guide model choice according to performance and resource constraints.
+\end{itemize}
+
+\subsection{Recommended Model}
+
+For an industrial application where accuracy is a priority and GPU resources are available, \textbf{BERT (bert-base-uncased)} is clearly recommended:
+
+\begin{itemize}
+    \item Best accuracy (82.55\%) and best F1-score (82.41\%).
+    \item Best recall (81.92\%), limiting false negatives.
+    \item Good robustness in the face of Twitter's informal language.
+\end{itemize}
+
+In more constrained contexts (real-time, limited resources), a well-calibrated \textbf{logistic regression}, or a \textbf{compressed BiLSTM}, can constitute excellent compromises.
+
+\subsection{Impact and Potential Applications}
+
+The developed models can be applied to many use cases:
+
+\begin{itemize}
+    \item \textbf{Brand reputation monitoring} (tracking customer opinions).
+    \item \textbf{Customer support} (prioritization of negative messages).
+    \item \textbf{Trend analysis} on social networks (marketing campaigns, events).
+    \item \textbf{Decision support} in BI dashboards.
+\end{itemize}
+
+Finally, this work provides a solid foundation for exploring other approaches (multi-class analysis, emotion detection, multilingual models) and for integrating the time dimension (sentiment evolution over the years).
+
+
+\end{document}
